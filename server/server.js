@@ -1,12 +1,20 @@
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/.env' });
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { Pool } = require('pg');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// Validate environment variables
+console.log('=== Environment Variables Check ===');
+console.log('Current directory:', __dirname);
+console.log('PORT:', process.env.PORT);
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not Set');
+console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not Set');
+console.log('================================');
+
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -16,47 +24,69 @@ app.use(express.json());
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Database configuration
+// Initialize database connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Initialize Gemini AI with logging
-console.log('Initializing Gemini AI...');
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-if (!GEMINI_API_KEY) {
-  console.error('ERROR: GEMINI_API_KEY is not set in environment variables');
-  process.exit(1);
-}
-console.log('GEMINI_API_KEY found in environment variables');
+// Test database connection
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('Error connecting to the database:', err.stack);
+  } else {
+    console.log('Successfully connected to database');
+    release();
+  }
+});
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-console.log('Gemini AI initialized successfully');
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Test Gemini AI connection
+async function testGeminiConnection() {
+  try {
+    console.log('Testing Gemini AI connection...');
+    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+    const result = await model.generateContent('Test connection');
+    console.log('Gemini AI connection successful');
+    return true;
+  } catch (error) {
+    console.error('Gemini AI connection failed:', error.message);
+    return false;
+  }
+}
 
 // File upload endpoint
 app.post('/api/upload', upload.single('file'), async (req, res) => {
+  console.log('=== File Upload Request Received ===');
   try {
     if (!req.file) {
       console.log('No file uploaded in request');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('File received:', {
+    console.log('File details:', {
       filename: req.file.originalname,
       mimetype: req.file.mimetype,
-      size: req.file.size
+      size: req.file.size,
+      buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
     });
 
     const fileContent = req.file.buffer.toString();
+    console.log('File content length:', fileContent.length);
+    console.log('First 100 characters of file:', fileContent.substring(0, 100));
+
     const fileType = req.file.mimetype;
     const fileName = req.file.originalname;
 
     // Initialize Gemini AI model
-    console.log('Initializing Gemini AI model for file processing...');
-    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+    console.log('Initializing Gemini AI model...');
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     console.log('Gemini AI model initialized successfully');
 
     // Prepare prompt for AI transformation
+    console.log('Preparing prompt for AI transformation...');
     const prompt = `
       Transform this data into SQL INSERT statements for the pump_performance table.
       IMPORTANT: Return ONLY the raw SQL statements without any markdown formatting, code blocks, or additional text.
@@ -119,45 +149,14 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const response = await result.response;
     let sqlStatements = response.text().replace(/```sql|```/g, '').trim();
     
-    // Validate and clean SQL statements
-    sqlStatements = sqlStatements
-      .split(';')
-      .filter(stmt => stmt.trim())
-      .map(stmt => {
-        // Validate the statement structure
-        if (!stmt.toUpperCase().includes('INSERT INTO PUMP_PERFORMANCE')) {
-          console.error('Invalid statement structure:', stmt);
-          return null;
-        }
-
-        // Fix string values in the SQL statement
-        return stmt
-          .replace(/VALUES\s*\((.*?)\)/g, (match, values) => {
-            // Split the values and process each one
-            const processedValues = values.split(',').map(value => {
-              value = value.trim();
-              // If it's a string value (starts and ends with single quote)
-              if (value.startsWith("'") && value.endsWith("'")) {
-                // Remove existing quotes and escape single quotes
-                value = value.slice(1, -1).replace(/'/g, "''");
-                return `'${value}'`;
-              }
-              return value;
-            });
-            return `VALUES (${processedValues.join(', ')})`;
-          })
-          .trim();
-      })
-      .filter(stmt => stmt !== null) // Remove invalid statements
-      .join(';\n') + ';';
-
     console.log('Received transformation from Gemini AI');
-    console.log('First SQL statement for validation:', sqlStatements.split(';')[0]);
+    console.log('First SQL statement:', sqlStatements.split(';')[0]);
 
     // Execute SQL statements
-    console.log('Executing SQL statements...');
+    console.log('Connecting to database...');
     const client = await pool.connect();
     try {
+      console.log('Starting database transaction...');
       await client.query('BEGIN');
       const statements = sqlStatements.split(';').filter(stmt => stmt.trim());
       console.log(`Executing ${statements.length} SQL statements`);
@@ -165,11 +164,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       for (const stmt of statements) {
         if (stmt.trim()) {
           try {
-            // Validate statement before execution
-            if (!stmt.toUpperCase().includes('INSERT INTO PUMP_PERFORMANCE')) {
-              console.error('Skipping invalid statement:', stmt);
-              continue;
-            }
+            console.log('Executing statement:', stmt.substring(0, 100) + '...');
             await client.query(stmt);
           } catch (err) {
             console.error('Error executing statement:', stmt);
@@ -178,20 +173,24 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
           }
         }
       }
+      console.log('Committing transaction...');
       await client.query('COMMIT');
       console.log('SQL statements executed successfully');
       res.json({ message: 'Data imported successfully' });
     } catch (err) {
-      console.error('Error executing SQL statements:', err);
+      console.error('Error in database transaction:', err);
       await client.query('ROLLBACK');
       throw err;
     } finally {
+      console.log('Releasing database connection...');
       client.release();
     }
   } catch (error) {
     console.error('Error processing file:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ error: 'Error processing file' });
   }
+  console.log('=== File Upload Request Completed ===');
 });
 
 // Get pump performance data
@@ -223,15 +222,48 @@ app.delete('/api/pump-performance/:id', async (req, res) => {
 
 // New endpoint to fetch unique file names
 app.get('/api/files', async (req, res) => {
+  console.log('=== Fetching File Names ===');
   try {
+    console.log('Querying database for unique file names...');
     const result = await pool.query('SELECT DISTINCT file_name FROM pump_performance ORDER BY file_name');
+    console.log('Files found:', result.rows.map(row => row.file_name));
     res.json(result.rows.map(row => row.file_name));
   } catch (error) {
     console.error('Error fetching file names:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ error: 'Error fetching file names' });
   }
+  console.log('=== File Names Fetch Completed ===');
 });
 
-app.listen(port, () => {
+// Add endpoint to fetch data for a specific file
+app.get('/api/data', async (req, res) => {
+  console.log('=== Fetching Data for File ===');
+  const fileName = req.query.file;
+  console.log('Requested file:', fileName);
+  
+  try {
+    console.log('Querying database for file data...');
+    const result = await pool.query(
+      'SELECT * FROM pump_performance WHERE file_name = $1 ORDER BY pump_id',
+      [fileName]
+    );
+    console.log(`Found ${result.rows.length} records for file ${fileName}`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching file data:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Error fetching file data' });
+  }
+  console.log('=== File Data Fetch Completed ===');
+});
+
+// Start server
+app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+  // Test Gemini AI connection on startup
+  const geminiConnected = await testGeminiConnection();
+  if (!geminiConnected) {
+    console.error('WARNING: Gemini AI is not properly configured. File uploads will fail.');
+  }
 }); 
