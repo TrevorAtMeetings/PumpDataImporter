@@ -82,7 +82,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       1. Parse the data according to the schema above
       2. Generate valid SQL INSERT statements
       3. Handle multiple curves and operating points
-      4. Set power to 0 if not provided
+      4. If a power value is present in the input data for an operating point, use it. If not, set power to 0.
       5. Return ONLY the SQL statements, one per line
       6. Do not include any markdown formatting or code blocks
       7. Each statement should end with a semicolon
@@ -90,7 +90,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       9. Escape any single quotes in string values with another single quote
       10. Format example:
           INSERT INTO pump_performance (pump_type, pump_model, speed, imp_dia, operating_point, flow_rate, head, efficiency, power, npshr) 
-          VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 0, 0);
+          VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 5.2, 0);
     `;
 
     console.log('Sending data to Gemini AI for transformation...');
