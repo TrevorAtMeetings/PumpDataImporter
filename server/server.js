@@ -94,6 +94,14 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       Data to transform:
       ${fileContent}
       
+      IMPORTANT DATA MAPPING INSTRUCTIONS:
+      - objPump.pM_IMP contains impeller diameters, separated by spaces.
+      - For each impeller diameter, the corresponding values in objPump.pM_HEAD, objPump.pM_EFF, objPump.pM_NP, etc. are separated by a pipe (|).
+      - For each impeller diameter group, the values are further separated by semicolons (;) for each operating point.
+      - For example, the first group in objPump.pM_HEAD (before the first |) is for the first impeller diameter in objPump.pM_IMP, the second group is for the second impeller diameter, etc.
+      - Each value in the group (split by ;) is for an operating point.
+      - For each impeller diameter and each operating point, create a row in the SQL table with the correct values for head, efficiency, NPSH, etc.
+      
       Table Structure:
       CREATE TABLE pump_performance (
           pump_id SERIAL PRIMARY KEY,
