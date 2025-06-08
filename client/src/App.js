@@ -9,6 +9,8 @@ function App() {
   const [data, setData] = useState([]);
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('none'); // none | pending | success
 
   useEffect(() => {
     console.log('App mounted, fetching files...');
@@ -34,6 +36,8 @@ function App() {
   const handleFileChange = (e) => {
     console.log('File selected:', e.target.files[0]);
     setFile(e.target.files[0]);
+    setUploadSuccess(false);
+    setUploadStatus('none');
   };
 
   const handleFileSelect = async (e) => {
@@ -71,6 +75,8 @@ function App() {
     console.log('Starting file upload process...');
     setLoading(true);
     setError(null);
+    setUploadSuccess(false);
+    setUploadStatus('pending');
 
     const formData = new FormData();
     formData.append('file', file);
@@ -85,6 +91,8 @@ function App() {
       });
       console.log('Upload successful:', response.data);
       setFile(null);
+      setUploadSuccess(true);
+      setUploadStatus('success');
       console.log('Refreshing file list...');
       fetchFiles();
     } catch (error) {
@@ -95,6 +103,7 @@ function App() {
         status: error.response?.status
       });
       setError(error.response?.data?.error || 'Error uploading file');
+      setUploadStatus('none');
     } finally {
       console.log('Upload process completed');
       setLoading(false);
@@ -106,21 +115,51 @@ function App() {
       <header className="App-header">
         <h1>Pump Performance Data Loader</h1>
         <div className="upload-section">
-          <input type="file" onChange={handleFileChange} />
-          <button onClick={handleUpload} disabled={loading}>
+          <div className="file-input-group">
+            <input
+              type="file"
+              id="custom-file-input"
+              className="custom-file-input"
+              onChange={handleFileChange}
+            />
+            <label htmlFor="custom-file-input" className="custom-file-label btn-same">
+              Choose File
+            </label>
+          </div>
+          <button onClick={handleUpload} disabled={!file || loading} className="btn-same">
             {loading ? 'Uploading...' : 'Upload'}
           </button>
+          <div className="upload-status-section">
+            <span className="upload-status-filename">
+              Filename: {file ? file.name : 'None'}
+            </span>
+            <span className={`upload-status-text status-${uploadStatus}`}>
+              Status: {uploadStatus === 'none' && 'None'}
+              {uploadStatus === 'pending' && 'Pending...'}
+              {uploadStatus === 'success' && (
+                <>
+                  Success <span className="upload-tick" title="Upload successful">✔</span>
+                </>
+              )}
+            </span>
+          </div>
           {error && <p className="error">{error}</p>}
         </div>
         <div className="file-selector">
           <select value={selectedFile} onChange={handleFileSelect}>
             <option value="">Select a file</option>
-            {files.map((fileName) => (
+            {files.filter(fileName => fileName).map((fileName) => (
               <option key={fileName} value={fileName}>
                 {fileName}
               </option>
             ))}
           </select>
+          {selectedFile && (
+            <div className="selected-file">
+              <span className="selected-file-label">Currently viewing:</span>
+              <span className="selected-file-name">{selectedFile}</span>
+            </div>
+          )}
         </div>
       </header>
       <main>

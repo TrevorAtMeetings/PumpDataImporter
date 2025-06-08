@@ -47,7 +47,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 async function testGeminiConnection() {
   try {
     console.log('Testing Gemini AI connection...');
-    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent('Test connection');
     console.log('Gemini AI connection successful');
     return true;
@@ -138,7 +138,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       7. Each statement should end with a semicolon
       8. String values must be properly quoted with single quotes
       9. Escape any single quotes in string values with another single quote
-      10. Format example:
+      10. Include the file name '${fileName}' in the file_name column for all INSERT statements
+      11. Format example:
           INSERT INTO pump_performance (pump_type, pump_model, speed, imp_dia, operating_point, flow_rate, head, efficiency, power, npshr, supplier, pump_application, pump_range, impeller_type, bep_flow_std, bep_head_std, min_speed, max_speed, file_name) 
           VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 5.2, 0, 'SupplierName', 'Water Supply', 'K', 'Closed Double Suction', 100, 50, 900, 1500, '${fileName}');
     `;
