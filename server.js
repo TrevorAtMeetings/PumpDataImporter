@@ -75,8 +75,26 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
           head NUMERIC,
           efficiency NUMERIC,
           power NUMERIC,
-          npshr NUMERIC
+          npshr NUMERIC,
+          supplier VARCHAR(255),
+          pump_application VARCHAR(255),
+          pump_range VARCHAR(255),
+          impeller_type VARCHAR(255),
+          bep_flow_std NUMERIC,
+          bep_head_std NUMERIC,
+          min_speed NUMERIC,
+          max_speed NUMERIC
       );
+      
+      Mapping from source data to SQL columns:
+      - objPump.pFilter1 → supplier
+      - objPump.pFilter2 → pump_application
+      - objPump.pFilter4 → pump_range
+      - objPump.pFilter6 → impeller_type
+      - objPump.pBEPFlowStd → bep_flow_std
+      - objPump.pBEPHeadStd → bep_head_std
+      - objPump.pMinSpeed → min_speed
+      - objPump.pMaxSpeed → max_speed
       
       Rules:
       1. Parse the data according to the schema above
@@ -89,8 +107,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       8. String values must be properly quoted with single quotes
       9. Escape any single quotes in string values with another single quote
       10. Format example:
-          INSERT INTO pump_performance (pump_type, pump_model, speed, imp_dia, operating_point, flow_rate, head, efficiency, power, npshr) 
-          VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 5.2, 0);
+          INSERT INTO pump_performance (pump_type, pump_model, speed, imp_dia, operating_point, flow_rate, head, efficiency, power, npshr, supplier, pump_application, pump_range, impeller_type, bep_flow_std, bep_head_std, min_speed, max_speed) 
+          VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 5.2, 0, 'SupplierName', 'Water Supply', 'K', 'Closed Double Suction', 100, 50, 900, 1500);
     `;
 
     console.log('Sending data to Gemini AI for transformation...');
