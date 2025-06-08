@@ -49,10 +49,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     const fileContent = req.file.buffer.toString();
     const fileType = req.file.mimetype;
+    const fileName = req.file.originalname;
 
     // Initialize Gemini AI model
     console.log('Initializing Gemini AI model for file processing...');
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
     console.log('Gemini AI model initialized successfully');
 
     // Prepare prompt for AI transformation
@@ -83,7 +84,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
           bep_flow_std NUMERIC,
           bep_head_std NUMERIC,
           min_speed NUMERIC,
-          max_speed NUMERIC
+          max_speed NUMERIC,
+          file_name VARCHAR(255)
       );
       
       Mapping from source data to SQL columns:
@@ -107,8 +109,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       8. String values must be properly quoted with single quotes
       9. Escape any single quotes in string values with another single quote
       10. Format example:
-          INSERT INTO pump_performance (pump_type, pump_model, speed, imp_dia, operating_point, flow_rate, head, efficiency, power, npshr, supplier, pump_application, pump_range, impeller_type, bep_flow_std, bep_head_std, min_speed, max_speed) 
-          VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 5.2, 0, 'SupplierName', 'Water Supply', 'K', 'Closed Double Suction', 100, 50, 900, 1500);
+          INSERT INTO pump_performance (pump_type, pump_model, speed, imp_dia, operating_point, flow_rate, head, efficiency, power, npshr, supplier, pump_application, pump_range, impeller_type, bep_flow_std, bep_head_std, min_speed, max_speed, file_name) 
+          VALUES ('HSC', '6 K 6 VANE', '1460', '295.00', 1, 10, 26, 8.33, 5.2, 0, 'SupplierName', 'Water Supply', 'K', 'Closed Double Suction', 100, 50, 900, 1500, '${fileName}');
     `;
 
     console.log('Sending data to Gemini AI for transformation...');
@@ -216,6 +218,17 @@ app.delete('/api/pump-performance/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting record:', error);
     res.status(500).json({ error: 'Error deleting record' });
+  }
+});
+
+// New endpoint to fetch unique file names
+app.get('/api/files', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT file_name FROM pump_performance ORDER BY file_name');
+    res.json(result.rows.map(row => row.file_name));
+  } catch (error) {
+    console.error('Error fetching file names:', error);
+    res.status(500).json({ error: 'Error fetching file names' });
   }
 });
 

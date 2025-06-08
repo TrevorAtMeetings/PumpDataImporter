@@ -1,46 +1,55 @@
-# Pump Performance Data Import ETL
+# Pump Performance ETL Application
 
-A full-stack web application for importing and transforming pump performance data using AI (Gemini AI) to automatically convert data into SQL format.
+A full-stack web application for ETL (Extract, Transform, Load) data processing of pump performance data, utilizing React for the frontend and Node.js for the backend. The application uses Gemini AI for data transformation and PostgreSQL for data storage.
 
-## Features
+## Project Structure
 
-- File upload support for TXT, JSON, and CSV files
-- AI-powered data transformation using Google's Gemini AI
-- Automatic SQL table population
-- Data visualization and management
-- Delete functionality for imported records
+```
+pump-performance-etl/
+├── client/                 # React frontend
+│   ├── public/            # Static files
+│   └── src/               # React source code
+├── server/                # Node.js backend
+│   ├── server.js         # Main server file
+│   └── .env              # Environment variables
+├── package.json          # Root package.json
+└── README.md            # This file
+```
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
-- PostgreSQL database
-- Google Gemini AI API key
+- PostgreSQL
+- Google Cloud account (for Gemini AI API)
 
 ## Setup
 
-1. Clone the repository
-2. Install backend dependencies:
+1. Clone the repository:
    ```bash
-   npm install
+   git clone <repository-url>
+   cd pump-performance-etl
    ```
 
-3. Install frontend dependencies:
+2. Install dependencies:
    ```bash
-   cd client
-   npm install
+   npm run install-all
    ```
 
-4. Create a `.env` file in the root directory with the following content:
-   ```
-   DATABASE_URL=postgresql://myuser:mypassword@localhost:5432/data_imported
-   GEMINI_API_KEY=your_gemini_api_key
-   PORT=5000
-   ```
+3. Set up environment variables:
+   - Copy `.env.example` to `server/.env`
+   - Update the variables with your configuration:
+     ```
+     PORT=3001
+     DB_USER=your_db_user
+     DB_PASSWORD=your_db_password
+     DB_HOST=localhost
+     DB_PORT=5432
+     DB_NAME=your_db_name
+     GEMINI_API_KEY=your_gemini_api_key
+     ```
 
-5. Create the database and table:
+4. Set up the database:
    ```sql
-   CREATE DATABASE data_imported;
-   
    CREATE TABLE pump_performance (
        pump_id SERIAL PRIMARY KEY,
        pump_type VARCHAR(255),
@@ -52,41 +61,63 @@ A full-stack web application for importing and transforming pump performance dat
        head NUMERIC,
        efficiency NUMERIC,
        power NUMERIC,
-       npshr NUMERIC
+       npshr NUMERIC,
+       supplier VARCHAR(255),
+       pump_application VARCHAR(255),
+       pump_range VARCHAR(255),
+       impeller_type VARCHAR(255),
+       bep_flow_std NUMERIC,
+       bep_head_std NUMERIC,
+       min_speed NUMERIC,
+       max_speed NUMERIC,
+       file_name VARCHAR(255)
    );
    ```
 
 ## Running the Application
 
-1. Start the backend server:
+1. Start both frontend and backend in development mode:
    ```bash
    npm run dev
    ```
 
-2. In a new terminal, start the frontend:
+2. Or run them separately:
    ```bash
-   cd client
-   npm start
+   # Terminal 1 - Backend
+   npm run server
+
+   # Terminal 2 - Frontend
+   npm run client
    ```
 
-3. Open your browser and navigate to `http://localhost:3000`
+3. Build for production:
+   ```bash
+   npm run build
+   ```
 
-## Usage
+## Features
 
-1. Click the "Choose File" button to select a TXT, JSON, or CSV file containing pump performance data
-2. Click "Upload File" to process the data
-3. The AI will automatically transform the data and insert it into the database
-4. View the imported data in the table below
-5. Use the delete button to remove any unwanted records
+- File upload and processing
+- AI-powered data transformation
+- Data visualization
+- File history tracking
+- Grouped data display by impeller diameter
+- Summary statistics
 
-## Error Handling
+## API Endpoints
 
-- The application includes error handling for file uploads and data processing
-- Invalid files will be rejected with appropriate error messages
-- Database errors are caught and displayed to the user
+- `POST /api/upload` - Upload and process a file
+- `GET /api/files` - Get list of uploaded files
+- `GET /api/data?file=<filename>` - Get data for a specific file
 
-## Security
+## Contributing
 
-- API keys are stored in environment variables
-- File uploads are validated before processing
-- SQL injection prevention through parameterized queries # PumpDataImporter
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the ISC License.
