@@ -204,37 +204,40 @@ function App() {
                   acc[impDia].push(row);
                   return acc;
                 }, {})
-              ).map(([impDia, rows]) => (
-                <div key={impDia} className="impeller-section">
-                  <h3>Impeller Diameter: {impDia}</h3>
-                  <div className="table-container">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Operating Point</th>
-                          <th>Flow Rate</th>
-                          <th>Head</th>
-                          <th>Efficiency</th>
-                          <th>Power</th>
-                          <th>NPSHR</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row, index) => (
-                          <tr key={index}>
-                            <td>{row.operating_point}</td>
-                            <td>{row.flow_rate}</td>
-                            <td>{row.head}</td>
-                            <td>{row.efficiency}</td>
-                            <td>{row.power}</td>
-                            <td>{row.npshr}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              ).flatMap(([impDia, rows]) => {
+                // Split rows into chunks of 7
+                const chunkSize = 7;
+                const chunks = [];
+                for (let i = 0; i < rows.length; i += chunkSize) {
+                  chunks.push(rows.slice(i, i + chunkSize));
+                }
+                const attributes = [
+                  { label: 'Flow Rate', key: 'flow_rate', unit: 'm³/hr' },
+                  { label: 'Head', key: 'head', unit: 'm' },
+                  { label: 'Efficiency', key: 'efficiency', unit: '%' },
+                  { label: 'Power', key: 'power', unit: 'kW' },
+                  { label: 'NPSH', key: 'npshr', unit: 'm' },
+                ];
+                return chunks.map((chunk, chunkIdx) => (
+                  <div key={impDia + '-' + chunkIdx} className="impeller-section">
+                    <div className="matrix-table-container">
+                      <table className="matrix-table">
+                        <tbody>
+                          {attributes.map((attr, attrIdx) => (
+                            <tr key={attr.key}>
+                              <td>{attr.label}</td>
+                              <td>{attr.unit}</td>
+                              {chunk.map((row, idx) => (
+                                <td key={idx}>{row[attr.key]}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })}
             </div>
           )}
         </main>
