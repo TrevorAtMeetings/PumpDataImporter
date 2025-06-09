@@ -14,7 +14,7 @@ console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not Set');
 console.log('================================');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT;
 
 // Middleware
 app.use(cors());
