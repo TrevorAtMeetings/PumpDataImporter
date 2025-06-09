@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
+const apiPort = process.env.REACT_APP_API_PORT || '3005';
+const apiUrl = `http://localhost:${apiPort}`;
+
 function App() {
   const [filesToUpload, setFilesToUpload] = useState([]); // Array of files
   const [loading, setLoading] = useState(false);
@@ -21,7 +24,7 @@ function App() {
   const fetchFiles = async () => {
     console.log('Fetching files from server...');
     try {
-      const response = await axios.get('http://localhost:3001/api/files');
+      const response = await axios.get(`${apiUrl}/api/files`);
       console.log('Files fetched successfully:', response.data);
       setFiles(response.data);
     } catch (error) {
@@ -52,7 +55,7 @@ function App() {
     if (fileName) {
       try {
         console.log('Fetching data for file:', fileName);
-        const response = await axios.get(`http://localhost:3001/api/data?file=${fileName}`);
+        const response = await axios.get(`${apiUrl}/api/data?file=${fileName}`);
         console.log('Data fetched successfully:', response.data);
         setData(response.data);
       } catch (error) {
@@ -93,7 +96,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', filesToUpload[i]);
       try {
-        await axios.post('http://localhost:3001/api/upload', formData, {
+        await axios.post(`${apiUrl}/api/upload`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },

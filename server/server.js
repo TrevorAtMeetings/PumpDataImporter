@@ -1,16 +1,22 @@
-require('dotenv').config({ path: __dirname + '/.env' });
+require('dotenv').config({ path: __dirname + '/../.env' });
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { Pool } = require('pg');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// Debug environment variables
+console.log('=== Environment Variables Debug ===');
+console.log('Current directory:', __dirname);
+console.log('Environment file path:', __dirname + '/../.env');
+console.log('All environment variables:', process.env);
+console.log('================================');
+
 // Validate environment variables
 console.log('=== Environment Variables Check ===');
 console.log('Current directory:', __dirname);
-console.log('PORT:', process.env.PORT);
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not Set');
-console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not Set');
+console.log('Environment file path:', __dirname + '/../.env');
+console.log('All environment variables:', process.env);
 console.log('================================');
 
 const app = express();
@@ -41,18 +47,37 @@ pool.connect((err, client, release) => {
 });
 
 // Initialize Gemini AI
+console.log('=== Gemini AI Initialization ===');
+if (process.env.GEMINI_API_KEY) {
+  const key = process.env.GEMINI_API_KEY;
+  const safeKey = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : '[key too short]';
+  console.log('GEMINI_API_KEY length:', key.length);
+  console.log('GEMINI_API_KEY (partial):', safeKey);
+} else {
+  console.log('GEMINI_API_KEY: Not set');
+}
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+console.log('Gemini AI instance created');
 
 // Test Gemini AI connection
 async function testGeminiConnection() {
   try {
-    console.log('Testing Gemini AI connection...');
+    console.log('=== Testing Gemini AI Connection ===');
+    console.log('Getting generative model...');
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log('Model retrieved successfully');
+    
+    console.log('Attempting to generate test content...');
     const result = await model.generateContent('Test connection');
-    console.log('Gemini AI connection successful');
+    console.log('Test content generated successfully');
+    console.log('=== Gemini AI Connection Test Complete ===');
     return true;
   } catch (error) {
-    console.error('Gemini AI connection failed:', error.message);
+    console.error('=== Gemini AI Connection Error ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('=== End Gemini AI Connection Error ===');
     return false;
   }
 }
